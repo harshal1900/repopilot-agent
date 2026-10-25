@@ -1,4 +1,4 @@
-"""Smoke test: one model call, traced in langsmi. """
+"""Smoke test: one model call, traced in langsmi."""
 
 import os
 from dotenv import load_dotenv
