@@ -37,7 +37,7 @@ class Plan(BaseModel):
     test_commands: list[str]
 
 
-class patch(BaseModel):
+class Patch(BaseModel):
     status: Literal["OK", "BLOCKED", "ERROR"] = "OK"
     reason: str = ""
     diff: str = ""
