@@ -49,7 +49,8 @@ class TestResult(BaseModel):
     command: str
     exit_code: int | None
     duration_s: float
-    timed_out: bool
+    timed_out: bool = False
+    passed: bool
     passed_count: int | None = None
     failed_count: int | None = None
     log_path: str = ""
