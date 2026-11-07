@@ -74,7 +74,7 @@ class Report(BaseModel):
     status: str
     files_changed: list[str] = Field(default_factory=list)
     tests: list[TestResult] = Field(default_factory=list)
-    not_run: list[TestResult] = Field(default_factory=list)
+    not_run: list[str] = Field(default_factory=list)
     findings: list[Finding] = Field(default_factory=list)
     repair_attempts: int = 0
     llm_calls: int = 0
