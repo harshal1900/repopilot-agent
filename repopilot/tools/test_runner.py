@@ -1,4 +1,5 @@
 """Runs allowed test commands and records the real exit status. The model never decides pass/fail."""
+
 import re
 import shlex
 import subprocess
@@ -37,7 +38,11 @@ def execute(
     start = time.monotonic()
     try:
         done = subprocess.run(
-            argv, cwd=cwd, capture_output=True, text=True, timeout=timeout_s,
+            argv,
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            timeout=timeout_s,
             check=False,
         )
         output, exit_code, timed_out = done.stdout + done.stderr, done.returncode, False

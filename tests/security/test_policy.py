@@ -1,6 +1,8 @@
 import os
 from pathlib import Path
+
 import pytest
+
 from repopilot.gates.policy import is_command_allowed, is_protected, resolve_inside_repo
 
 

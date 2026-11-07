@@ -3,6 +3,7 @@
 import shlex
 from fnmatch import fnmatch
 from pathlib import Path, PurePosixPath
+
 from repopilot.config import PROTECTED_PATTERNS
 
 # Only these command prefixes may run. Nothing else is ever executed.
@@ -30,8 +31,7 @@ def is_protected(path: str) -> bool:
     normalized = PurePosixPath(path.replace("\\", "/")).as_posix()
     name = PurePosixPath(normalized).name
     return any(
-        fnmatch(normalized, pattern) or fnmatch(name, pattern)
-        for pattern in PROTECTED_PATTERNS
+        fnmatch(normalized, pattern) or fnmatch(name, pattern) for pattern in PROTECTED_PATTERNS
     )
 
 
@@ -45,6 +45,5 @@ def is_command_allowed(command: str) -> bool:
     if not tokens or any(token in FORBIDDEN_TOKENS for token in tokens):
         return False
     return any(
-        tokens[: len(shlex.split(prefix))] == shlex.split(prefix)
-        for prefix in ALLOWED_COMMANDS
+        tokens[: len(shlex.split(prefix))] == shlex.split(prefix) for prefix in ALLOWED_COMMANDS
     )

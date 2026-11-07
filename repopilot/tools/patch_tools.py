@@ -2,6 +2,7 @@
 
 import subprocess
 from pathlib import Path
+
 from repopilot.gates.policy import is_protected, resolve_inside_repo
 
 
@@ -20,7 +21,7 @@ def files_in_diff(diff_text: str) -> list[str]:
             path = line[6:].split("\t")[0].strip()
             if path and path not in files:
                 files.append(path)
-                return files
+    return files
 
 
 def apply_patch(root: Path, diff_text: str, max_lines: int) -> tuple[bool, str]:
@@ -38,23 +39,22 @@ def apply_patch(root: Path, diff_text: str, max_lines: int) -> tuple[bool, str]:
             resolve_inside_repo(root, name)
         except PermissionError as error:
             return False, f"refused: {error}"
-        check = subprocess.run(
-            ["git", "apply", "--check", "-"],
-            input=diff_text,
-            text=True,
-            cwd=root,
-            capture_output=True,
-            check=False,
-        )
-        if check.returncode != 0:
-
-            return False, f"refused: git apply --check failed: {check.stderr.strip()}"
-        subprocess.run(
-            ["git", "apply", "-"],
-            input=diff_text,
-            text=True,
-            cwd=root,
-            capture_output=True,
-            check=True,
-        )
+    check = subprocess.run(
+        ["git", "apply", "--check", "-"],
+        input=diff_text,
+        text=True,
+        cwd=root,
+        capture_output=True,
+        check=False,
+    )
+    if check.returncode != 0:
+        return False, f"refused: git apply --check failed: {check.stderr.strip()}"
+    subprocess.run(
+        ["git", "apply", "-"],
+        input=diff_text,
+        text=True,
+        cwd=root,
+        capture_output=True,
+        check=True,
+    )
     return True, "applied: " + ", ".join(files)

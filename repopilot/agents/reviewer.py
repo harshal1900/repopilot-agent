@@ -3,6 +3,7 @@ findings."""
 
 from langchain.agents import create_agent
 from langchain.agents.middleware import ModelRetryMiddleware
+
 from repopilot.agents.common import load_prompt
 from repopilot.schemas import Review
 

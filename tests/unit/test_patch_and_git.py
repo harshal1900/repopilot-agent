@@ -1,5 +1,7 @@
 import subprocess
+
 import pytest
+
 from repopilot.tools.patch_tools import apply_patch, count_changed_lines, files_in_diff
 
 
@@ -26,14 +28,7 @@ def repo(tmp_path):
     return tmp_path
 
 
-GOOD = (
-    "--- a/app.py\n"
-    "+++ b/app.py\n"
-    "@@ -1,2 +1,2 @@\n"
-    " def f():\n"
-    "- return 1\n"
-    "+ return 2\n"
-)
+GOOD = "--- a/app.py\n+++ b/app.py\n@@ -1,2 +1,2 @@\n def f():\n- return 1\n+ return 2\n"
 
 
 def test_valid_one_line_change_applies(repo):
@@ -56,9 +51,7 @@ def test_over_line_limit_is_refused(repo):
 
 
 def test_malformed_diff_is_refused_and_unchanged(repo):
-    ok, _ = apply_patch(
-        repo, "--- a/app.py\n+++ b/app.py\n@@ garbage @@\n+x\n", max_lines=300
-    )
+    ok, _ = apply_patch(repo, "--- a/app.py\n+++ b/app.py\n@@ garbage @@\n+x\n", max_lines=300)
     assert not ok
     assert "return 1" in (repo / "app.py").read_text()
 

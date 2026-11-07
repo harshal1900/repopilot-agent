@@ -1,6 +1,7 @@
 """Read-only repository tools. They never leave the repository root."""
 
 from pathlib import Path
+
 from repopilot.gates.policy import resolve_inside_repo
 
 SKIP_DIRS = {
@@ -44,9 +45,7 @@ def read_file(root: Path, rel_path: str, max_bytes: int = 20000) -> tuple[bool, 
     return True, text
 
 
-def search_code(
-    root: Path, query: str, max_hits: int = 50
-) -> list[tuple[str, int, str]]:
+def search_code(root: Path, query: str, max_hits: int = 50) -> list[tuple[str, int, str]]:
     """Find lines containing `query`. Returns (relative file, line number, line text)."""
     base = Path(root).resolve()
     hits: list[tuple[str, int, str]] = []

@@ -5,9 +5,7 @@ from pathlib import Path
 
 
 def run_git(root: Path, args: list[str]) -> str:
-    result = subprocess.run(
-        ["git", *args], cwd=root, capture_output=True, text=True, check=False
-    )
+    result = subprocess.run(["git", *args], cwd=root, capture_output=True, text=True, check=False)
     if result.returncode != 0:
         raise RuntimeError(f"git {' '.join(args)} failed: {result.stderr.strip()}")
     return result.stdout

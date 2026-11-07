@@ -4,6 +4,7 @@ import shlex
 import subprocess
 import uuid
 from pathlib import Path
+
 from repopilot.gates.policy import is_command_allowed
 from repopilot.schemas import TestResult
 from repopilot.tools.test_runner import execute
@@ -51,8 +52,8 @@ def run_in_sandbox(
     name = f"repopilot-{uuid.uuid4().hex[:12]}"
     argv = build_docker_command(Path(root), shlex.split(command), image, name)
 
+    def kill_container() -> None:
+        # Stopping the docker client does not stop the container, so kill it by name.
+        subprocess.run(["docker", "kill", name], capture_output=True, check=False)
 
-def kill_container() -> None:
-    # Stopping the docker client does not stop the container, so kill it by name.
-    subprocess.run(["docker", "kill", name], capture_output=True, check=False)
     return execute(argv, None, command, timeout_s, logs_dir, on_timeout=kill_container)

@@ -1,9 +1,11 @@
 """Explorer: read-only tools only. It cannot write, apply or run anything."""
 
 from pathlib import Path
+
 from langchain.agents import create_agent
 from langchain.agents.middleware import ModelRetryMiddleware
 from langchain_core.tools import tool
+
 from repopilot.agents.common import load_prompt
 from repopilot.tools.repository import list_files, read_file, search_code
 from repopilot.tools.skills import list_skills, load_skill

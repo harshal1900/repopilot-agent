@@ -6,9 +6,11 @@ commands, the test runner records exit codes, and the reporter writes the facts.
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
+
 from langchain.agents.middleware.model_call_limit import ModelCallLimitExceededError
 from langgraph.types import interrupt
 from pydantic import ValidationError
+
 from repopilot.agents.common import ask
 from repopilot.gates.policy import is_command_allowed, is_protected
 from repopilot.schemas import Analysis, Finding, Patch, Plan, Report, TestResult
@@ -67,9 +69,7 @@ def make_explorer_node(agent) -> Callable[[RepoPilotState], dict[str, Any]]:
 
 def make_analyst_node(agent) -> Callable[[RepoPilotState], dict[str, Any]]:
     def analyst_node(state: RepoPilotState) -> dict[str, Any]:
-        message = (
-            f"Issue:\n{state['task'].issue}\n\nRepository map:\n{state['repo_map']}"
-        )
+        message = f"Issue:\n{state['task'].issue}\n\nRepository map:\n{state['repo_map']}"
         analysis: Analysis | None = None
         for _ in range(2):  # one retry on a malformed answer
             try:
@@ -147,9 +147,7 @@ def approval_node(state: RepoPilotState) -> dict[str, Any]:
     return {"status": "APPROVED" if decision else "REJECTED"}
 
 
-def make_implementer_node(
-    agent, max_lines: int
-) -> Callable[[RepoPilotState], dict[str, Any]]:
+def make_implementer_node(agent, max_lines: int) -> Callable[[RepoPilotState], dict[str, Any]]:
     def implementer_node(state: RepoPilotState) -> dict[str, Any]:
         root = Path(state["task"].repo_path)
 
@@ -185,9 +183,7 @@ def make_implementer_node(
                 "llm_calls": calls,
             }
         return {
-            "patch": patch.model_copy(
-                update={"changed_files": files_in_diff(patch.diff)}
-            ),
+            "patch": patch.model_copy(update={"changed_files": files_in_diff(patch.diff)}),
             "status": "IMPLEMENTED",
             "llm_calls": calls,
         }
@@ -227,9 +223,7 @@ def route_after_test(state: RepoPilotState) -> str:
 def make_reviewer_node(agent) -> Callable[[RepoPilotState], dict[str, Any]]:
     def reviewer_node(state: RepoPilotState) -> dict[str, Any]:
         criteria = "\n".join(f"- {c}" for c in _analysis(state).acceptance_criteria)
-        results = "\n".join(
-            f"{r.command}: exit {r.exit_code}" for r in state["test_results"]
-        )
+        results = "\n".join(f"{r.command}: exit {r.exit_code}" for r in state["test_results"])
         message = (
             f"Acceptance criteria:\n{criteria}\n\nTest results:\n{results}\n\n"
             f"Diff:\n{git_diff(Path(state['task'].repo_path))}"
@@ -295,9 +289,7 @@ def build_report(state: RepoPilotState, status: str) -> Report:
 def write_report(report: Report, reports_dir: Path) -> Path:
     folder = Path(reports_dir) / report.task_id
     folder.mkdir(parents=True, exist_ok=True)
-    (folder / "report.json").write_text(
-        report.model_dump_json(indent=2), encoding="utf-8"
-    )
+    (folder / "report.json").write_text(report.model_dump_json(indent=2), encoding="utf-8")
     lines = [
         f"# RepoPilot report: {report.task_id}",
         "",
@@ -309,14 +301,12 @@ def write_report(report: Report, reports_dir: Path) -> Path:
     ]
     lines += [f"- {name}" for name in report.files_changed] or ["- none"]
     lines += ["", "## Tests"]
-    lines += [
-        f"- `{t.command}`: exit {t.exit_code}, passed={t.passed}" for t in report.tests
-    ] or ["- none run"]
+    lines += [f"- `{t.command}`: exit {t.exit_code}, passed={t.passed}" for t in report.tests] or [
+        "- none run"
+    ]
     lines += [f"- NOT RUN: `{c}`" for c in report.not_run]
     lines += ["", "## Findings"]
-    lines += [f"- [{f.severity}] {f.file}: {f.message}" for f in report.findings] or [
-        "- none"
-    ]
+    lines += [f"- [{f.severity}] {f.file}: {f.message}" for f in report.findings] or ["- none"]
     (folder / "report.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     return folder
 

@@ -1,9 +1,10 @@
-""" Shared state for the LangGraph workflow.
+"""Shared state for the LangGraph workflow.
 Keys annotated with `add` are list reducers: a node that returns a list for
-such a key appends to the existing list instead of replacing it. """
+such a key appends to the existing list instead of replacing it."""
 
 from operator import add
 from typing import Annotated, TypedDict
+
 from repopilot.schemas import Analysis, Finding, Patch, Plan, Report, Task, TestResult
 
 
@@ -21,7 +22,8 @@ class RepoPilotState(TypedDict):
     repair_attempts: int
     llm_calls: int
     report: Report | None
-    
+
+
 def make_initial_state(task: Task, max_repair_attempts: int) -> RepoPilotState:
     return RepoPilotState(
         task=task,
@@ -38,5 +40,3 @@ def make_initial_state(task: Task, max_repair_attempts: int) -> RepoPilotState:
         llm_calls=0,
         report=None,
     )
-
-

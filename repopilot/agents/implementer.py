@@ -2,8 +2,10 @@
 diff through the gate."""
 
 from typing import Any
+
 from langchain.agents import create_agent
 from langchain.agents.middleware import ModelCallLimitMiddleware, ModelRetryMiddleware
+
 from repopilot.agents.common import load_prompt
 from repopilot.agents.explorer import make_explorer_tools
 from repopilot.schemas import Patch

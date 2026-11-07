@@ -15,7 +15,13 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-REQUIRED_ENV = ["MODEL_PROVIDER", "MODEL_NAME", "LANGSMITH_TRACING", "LANGSMITH_PROJECT", "LANGSMITH_API_KEY"]
+REQUIRED_ENV = [
+    "MODEL_PROVIDER",
+    "MODEL_NAME",
+    "LANGSMITH_TRACING",
+    "LANGSMITH_PROJECT",
+    "LANGSMITH_API_KEY",
+]
 
 
 def read_env_names(path: Path) -> set[str]:
@@ -28,10 +34,15 @@ def read_env_names(path: Path) -> set[str]:
 
 
 def test_python_is_3_11_or_newer():
-    assert sys.version_info >= (3, 11), f"Found Python {sys.version.split()[0]}; install 3.11+ (3.12 recommended)"
+    assert sys.version_info >= (3, 11), (
+        f"Found Python {sys.version.split()[0]}; install 3.11+ (3.12 recommended)"
+    )
 
 
-@pytest.mark.parametrize("module", ["langchain", "langgraph", "langsmith", "pydantic", "dotenv", "pytest", "ruff", "mypy"])
+@pytest.mark.parametrize(
+    "module",
+    ["langchain", "langgraph", "langsmith", "pydantic", "dotenv", "pytest", "ruff", "mypy"],
+)
 def test_requirement_imports(module):
     importlib.import_module(module)
 
@@ -56,8 +67,10 @@ def test_git_is_installed():
 def test_docker_daemon_is_running():
     if not shutil.which("docker"):
         pytest.skip("Docker not installed yet; needed before Day 2 Lab 14")
-    result = subprocess.run(["docker", "info"], capture_output=True, text=True)
-    assert result.returncode == 0 and "Server Version" in result.stdout, "Start Docker Desktop, then run: docker info"
+    result = subprocess.run(["docker", "info"], check=False, capture_output=True, text=True)
+    assert result.returncode == 0 and "Server Version" in result.stdout, (
+        "Start Docker Desktop, then run: docker info"
+    )
 
 
 def test_model_key_is_not_placeholder_when_live_run_needed():
