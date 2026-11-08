@@ -1,0 +1,8 @@
+Deserializing unregistered type repopilot.schemas.Task from checkpoint. This will be blocked in a future version. Set LANGGRAPH_STRICT_MSGPACK=true to block now, or add to allowed_msgpack_modules to allow explicitly: [('repopilot.schemas', 'Task')]
+Proposed plan:
+{'files_to_change': ['legacy_app/service.py'], 'change_summary': 'Rename get_user function to fetch_user in service.py so that tests/test_service.py can import it successfully', 'regression_test': 'tests/test_service.py::test_fetch_user', 'test_commands': ['python -m pytest tests/test_service.py -q', 'python -m pytest tests/test_models.py -q']}
+Apply this plan to the workspace? [y/N] Deserializing unregistered type repopilot.schemas.Analysis from checkpoint. This will be blocked in a future version. Set LANGGRAPH_STRICT_MSGPACK=true to block now, or add to allowed_msgpack_modules to allow explicitly: [('repopilot.schemas', 'Analysis')]
+Deserializing unregistered type repopilot.schemas.Plan from checkpoint. This will be blocked in a future version. Set LANGGRAPH_STRICT_MSGPACK=true to block now, or add to allowed_msgpack_modules to allow explicitly: [('repopilot.schemas', 'Plan')]
+Deserializing unregistered type repopilot.schemas.TestResult from checkpoint. This will be blocked in a future version. Set LANGGRAPH_STRICT_MSGPACK=true to block now, or add to allowed_msgpack_modules to allow explicitly: [('repopilot.schemas', 'TestResult')]
+Status: ERROR
+Report: reports/run-001/report.md

@@ -1,8 +1,8 @@
-"""Reviewer: independent read of the diff and the test evidence. Returns typed
-findings."""
+"""Reviewer: independent read of the diff and the test evidence. Returns typed findings."""
 
 from langchain.agents import create_agent
 from langchain.agents.middleware import ModelRetryMiddleware
+from langchain.agents.structured_output import ToolStrategy
 
 from repopilot.agents.common import load_prompt
 from repopilot.schemas import Review
@@ -13,6 +13,6 @@ def build_reviewer(model):
         model=model,
         tools=[],
         system_prompt=load_prompt("reviewer"),
-        response_format=Review,
-        middleware=[ModelRetryMiddleware()],
+        response_format=ToolStrategy(Review),
+        middleware=[ModelRetryMiddleware(on_failure="error")],
     )

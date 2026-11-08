@@ -2,6 +2,7 @@
 
 from langchain.agents import create_agent
 from langchain.agents.middleware import ModelRetryMiddleware
+from langchain.agents.structured_output import ToolStrategy
 
 from repopilot.agents.common import load_prompt
 from repopilot.schemas import Analysis
@@ -12,6 +13,6 @@ def build_analyst(model):
         model=model,
         tools=[],
         system_prompt=load_prompt("analyst"),
-        response_format=Analysis,
-        middleware=[ModelRetryMiddleware()],
+        response_format=ToolStrategy(Analysis),
+        middleware=[ModelRetryMiddleware(on_failure="error")],
     )

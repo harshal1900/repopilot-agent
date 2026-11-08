@@ -1,4 +1,5 @@
 """Workflow nodes. Each node takes the state and returns only the keys it changes.
+
 Agents propose (text or typed objects). Code decides: the gate checks paths and
 commands, the test runner records exit codes, and the reporter writes the facts.
 """
@@ -19,7 +20,7 @@ from repopilot.tools.git_tools import git_diff, run_git
 from repopilot.tools.patch_tools import apply_patch, files_in_diff
 
 RunTest = Callable[[str, Path], TestResult]
-FINAL_STOP = {"BLOCKED", "ERROR", "FAILED", "REJECTED", "NEEDS_HUMAN_REVIEW"}
+FINAL_STOP = {"BLOCKED", "ERROR", "FAILED", "REJECTED", "NEEDS_HUMAN_REVIEW", "PATCH_REFUSED"}
 
 
 def _last_text(result: dict[str, Any]) -> str:
@@ -54,10 +55,13 @@ def validate_node(state: RepoPilotState) -> dict[str, Any]:
 
 def make_explorer_node(agent) -> Callable[[RepoPilotState], dict[str, Any]]:
     def explorer_node(state: RepoPilotState) -> dict[str, Any]:
-        result = ask(
-            agent,
-            f"Issue:\n{state['task'].issue}\n\nMap the repository for this issue.",
-        )
+        try:
+            result = ask(
+                agent,
+                f"Issue:\n{state['task'].issue}\n\nMap the repository for this issue.",
+            )
+        except Exception:  # the model failed after its retries; stop instead of guessing
+            return {"status": "NEEDS_HUMAN_REVIEW", "llm_calls": state["llm_calls"] + 1}
         return {
             "repo_map": _last_text(result),
             "status": "EXPLORED",
@@ -74,14 +78,15 @@ def make_analyst_node(agent) -> Callable[[RepoPilotState], dict[str, Any]]:
         for _ in range(2):  # one retry on a malformed answer
             try:
                 analysis = ask(agent, message)["structured_response"]
+                if analysis is None:
+                    raise ValueError("the model gave no structured analysis")
                 break
             except (ValidationError, ValueError, KeyError, TypeError):
                 analysis = None
+            except Exception:  # the model failed after its retries; stop instead of guessing
+                return {"status": "NEEDS_HUMAN_REVIEW", "llm_calls": state["llm_calls"] + 1}
         if analysis is None:
-            return {
-                "status": "NEEDS_HUMAN_REVIEW",
-                "llm_calls": state["llm_calls"] + 2,
-            }
+            return {"status": "NEEDS_HUMAN_REVIEW", "llm_calls": state["llm_calls"] + 2}
         return {
             "analysis": analysis,
             "status": "ANALYSED",
@@ -95,7 +100,10 @@ def make_planner_node(agent) -> Callable[[RepoPilotState], dict[str, Any]]:
     def planner_node(state: RepoPilotState) -> dict[str, Any]:
         analysis = _analysis(state)
         message = f"Analysis:\n{analysis.model_dump_json(indent=2)}\n\nRepository map:\n{state['repo_map']}"
-        plan: Plan = ask(agent, message)["structured_response"]
+        try:
+            plan: Plan = ask(agent, message)["structured_response"]
+        except Exception:  # the model failed after its retries; stop instead of guessing
+            return {"status": "NEEDS_HUMAN_REVIEW", "llm_calls": state["llm_calls"] + 1}
         updates: dict[str, Any] = {
             "plan": plan,
             "status": "PLANNED",
@@ -127,8 +135,16 @@ def route_after_validate(state: RepoPilotState) -> str:
     return "reporter" if state["status"] == "BLOCKED" else "explorer"
 
 
+def route_after_explorer(state: RepoPilotState) -> str:
+    return "reporter" if state["status"] == "NEEDS_HUMAN_REVIEW" else "analyst"
+
+
+def route_after_analyst(state: RepoPilotState) -> str:
+    return "reporter" if state["status"] == "NEEDS_HUMAN_REVIEW" else "planner"
+
+
 def route_after_planner(state: RepoPilotState) -> str:
-    return "reporter" if state["status"] == "BLOCKED" else "baseline"
+    return "reporter" if state["status"] in {"BLOCKED", "NEEDS_HUMAN_REVIEW"} else "baseline"
 
 
 def route_after_baseline(state: RepoPilotState) -> str:
@@ -150,7 +166,6 @@ def approval_node(state: RepoPilotState) -> dict[str, Any]:
 def make_implementer_node(agent, max_lines: int) -> Callable[[RepoPilotState], dict[str, Any]]:
     def implementer_node(state: RepoPilotState) -> dict[str, Any]:
         root = Path(state["task"].repo_path)
-
         if state["patch"] and state["patch"].changed_files:
             # Repair attempt: return to the known state before the new diff is applied.
             run_git(root, ["checkout", "--", *state["patch"].changed_files])
@@ -158,8 +173,15 @@ def make_implementer_node(agent, max_lines: int) -> Callable[[RepoPilotState], d
             f"Plan:\n{_plan(state).model_dump_json(indent=2)}\n\n"
             f"Previous failing output (if any):\n{_failing_output(state)}"
         )
+        if state["patch"] is not None and state["patch"].status == "ERROR":
+            message += (
+                "\n\nYour previous diff was refused by the safety gate: "
+                f"{state['patch'].reason}\n"
+                "Return a corrected unified diff. Each hunk header must match its lines "
+                "exactly, and the diff must apply with `git apply --check`."
+            )
         try:
-            patch: Patch = ask(agent, message)["structured_response"]
+            result = ask(agent, message)
         except (
             ModelCallLimitExceededError,
             ValidationError,
@@ -173,13 +195,24 @@ def make_implementer_node(agent, max_lines: int) -> Callable[[RepoPilotState], d
                 "llm_calls": state["llm_calls"] + 1,
             }
         calls = state["llm_calls"] + 1
+        patch = result.get("structured_response")
+        if patch is None:
+            # The model answered without calling the answer tool. Treat it like a refused diff and retry.
+            return {
+                "patch": Patch(status="ERROR", reason="the model gave no structured answer"),
+                "status": "PATCH_REFUSED",
+                "repair_attempts": state["repair_attempts"] + 1,
+                "llm_calls": calls,
+            }
         if patch.status != "OK":
             return {"patch": patch, "status": "BLOCKED", "llm_calls": calls}
         applied, reason = apply_patch(root, patch.diff, max_lines)
         if not applied:
+            # The gate refused the diff. Count it as a repair attempt so the Implementer can retry.
             return {
                 "patch": Patch(status="ERROR", reason=reason),
-                "status": "ERROR",
+                "status": "PATCH_REFUSED",
+                "repair_attempts": state["repair_attempts"] + 1,
                 "llm_calls": calls,
             }
         return {
@@ -196,6 +229,8 @@ def route_after_approval(state: RepoPilotState) -> str:
 
 
 def route_after_implementer(state: RepoPilotState) -> str:
+    if state["status"] == "PATCH_REFUSED":
+        return "implementer" if state["repair_attempts"] <= state["max_repair_attempts"] else "reporter"
     return "reporter" if state["status"] in FINAL_STOP else "test_node"
 
 
@@ -267,7 +302,7 @@ def final_status(state: RepoPilotState) -> str:
 def build_report(state: RepoPilotState, status: str) -> Report:
     tests = state["test_results"]
     passed = sum(1 for r in tests if r.passed)
-    plan = _plan(state)
+    plan = state["plan"]  # may be None when the run stopped before the planner
     return Report(
         task_id=state["task"].id,
         repo_path=state["task"].repo_path,

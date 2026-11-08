@@ -56,5 +56,5 @@ def build_explorer(model, repo_root: Path):
         model=model,
         tools=make_explorer_tools(repo_root),
         system_prompt=load_prompt("explorer"),
-        middleware=[ModelRetryMiddleware()],
+        middleware=[ModelRetryMiddleware(on_failure="error")],
     )

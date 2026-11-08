@@ -2,6 +2,7 @@
 
 from langchain.agents import create_agent
 from langchain.agents.middleware import ModelRetryMiddleware
+from langchain.agents.structured_output import ToolStrategy
 
 from repopilot.agents.common import load_prompt
 from repopilot.schemas import Plan
@@ -12,6 +13,6 @@ def build_planner(model):
         model=model,
         tools=[],
         system_prompt=load_prompt("planner"),
-        response_format=Plan,
-        middleware=[ModelRetryMiddleware()],
+        response_format=ToolStrategy(Plan),
+        middleware=[ModelRetryMiddleware(on_failure="error")],
     )
